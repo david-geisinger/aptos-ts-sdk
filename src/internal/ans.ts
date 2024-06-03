@@ -68,6 +68,28 @@ export function isValidANSName(name: string): { domainName: string; subdomainNam
   };
 }
 
+enum SubdomainExpirationPolicy {
+  Independent = 0,
+  FollowsDomain = 1,
+}
+export function isActiveANSName(name: GetANSNameResponse[0]): boolean {
+  if (!name) return false;
+
+  const isTLDExpired = new Date(name.domain_expiration_timestamp).getTime() < Date.now();
+  const isExpired = new Date(name.expiration_timestamp).getTime() < Date.now();
+
+  // If we are a subdomain, if our parent is expired we are always expired
+  if (name.subdomain && isTLDExpired) return false;
+
+  // If we are a subdomain and our expiration policy is to follow the domain, we
+  // are active (since we know our parent is not expired by this point)
+  if (name.subdomain && name.subdomain_expiration_policy === SubdomainExpirationPolicy.FollowsDomain) return true;
+
+  // At this point, we are either a TLD or a subdomain with an independent
+  // expiration policy, we are active as long as we the expiration timestamp
+  return !isExpired;
+}
+
 export const LOCAL_ANS_ACCOUNT_PK =
   process.env.ANS_TEST_ACCOUNT_PRIVATE_KEY ?? "0x37368b46ce665362562c6d1d4ec01a08c8644c488690df5a17e13ba163e20221";
 export const LOCAL_ANS_ACCOUNT_ADDRESS =
@@ -344,7 +366,6 @@ export async function getName(args: {
   const where: CurrentAptosNamesBoolExp = {
     domain: { _eq: domainName },
     subdomain: { _eq: subdomainName },
-    is_active: { _eq: true },
   };
 
   const data = await queryIndexer<GetNamesQuery>({
@@ -365,7 +386,7 @@ export async function getName(args: {
     res = sanitizeANSName(res);
   }
 
-  return res;
+  return isActiveANSName(res) ? res : undefined;
 }
 
 interface QueryNamesOptions {
@@ -492,13 +513,12 @@ export async function getDomainSubdomains(
           ...(args.options?.where ?? {}),
           domain: { _eq: domain },
           subdomain: { _neq: "" },
-          is_active: { _eq: true },
         },
       },
     },
   });
 
-  return data.current_aptos_names.map(sanitizeANSName);
+  return data.current_aptos_names.map(sanitizeANSName).filter(isActiveANSName);
 }
 
 /**
