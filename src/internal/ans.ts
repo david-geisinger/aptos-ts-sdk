@@ -68,10 +68,22 @@ export function isValidANSName(name: string): { domainName: string; subdomainNam
   };
 }
 
-enum SubdomainExpirationPolicy {
+export enum SubdomainExpirationPolicy {
   Independent = 0,
   FollowsDomain = 1,
 }
+
+  /**
+   * A helper function to determine if a given ANS name is considered active or
+   * not. Domains are considered active if their expiration date is in the
+   * future. Subdomains have two policies which modify their behavior. They can
+   * follow their parent's expiration (1) in which they ignore their own
+   * expiration timestamp or they can expire independently (0) in which they can
+   * expire before their parent but not afterwards.
+   *
+   * @param name - An ANS name returned from one of the functions of the SDK
+   * @returns A boolean representing if the contract considers the name active or not
+   */
 export function isActiveANSName(name: GetANSNameResponse[0]): boolean {
   if (!name) return false;
 
