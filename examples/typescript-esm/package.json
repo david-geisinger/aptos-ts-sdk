@@ -8,6 +8,7 @@
     "build": "pnpm _build:esm",
     "_build:esm": "tsup *.ts sponsored_transactions/*.ts --platform node --format esm --dts --out-dir dist",
     "simple_transfer": "ts-node --esm dist/simple_transfer.js",
+    "digital_asset_transfer_prod": "ts-node --esm dist/digital_asset_transfer_prod.js",
     "simple_sponsored_transaction": "ts-node --esm dist/sponsored_transactions/simple_sponsored_transaction.js",
     "simple_digital_asset": "ts-node --esm dist/simple_digital_asset.js",
     "multisig_v2": "ts-node --esm dist/multisig_v2.js",

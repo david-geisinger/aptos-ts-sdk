@@ -6,7 +6,15 @@
  */
 
 import "dotenv";
-import { Account, Aptos, AptosConfig, Ed25519PrivateKey, Network, NetworkToNetworkName } from "@aptos-labs/ts-sdk";
+import {
+  Account,
+  AccountAddress,
+  Aptos,
+  AptosConfig,
+  Ed25519PrivateKey,
+  Network,
+  NetworkToNetworkName,
+} from "@aptos-labs/ts-sdk";
 
 const INITIAL_BALANCE = 100_000_000;
 
@@ -24,31 +32,20 @@ const example = async () => {
   //const alice = Account.generate();
   const pk = new Ed25519PrivateKey("0xaffa9c98e31686543bc8d8e60f02036182170a14cc36bedc965f8a2299fd92b3");
   const alice = Account.fromPrivateKey({ privateKey: pk });
-  const bob = Account.generate();
+  //Address is 0xb88d6f870629a386c7d78c9627767dcc0cadde94926307865a7adc49241df144, need to convert to uint 8
+  let uintArray = Uint8Array.from(
+    Buffer.from("b88d6f870629a386c7d78c9627767dcc0cadde94926307865a7adc49241df144", "hex"),
+  );
+  const bobAccountAddress = new AccountAddress(uintArray);
 
   console.log("=== Addresses ===\n");
   console.log(`Alice's address is: ${alice.accountAddress}`);
-  console.log(`Bobs's address is: ${bob.accountAddress}`);
-  console.log(`Bobs's pk is: ${bob.privateKey}`);
 
-  /*
-  // Fund and create the accounts
-  await aptos.faucet.fundAccount({
-    accountAddress: alice.accountAddress,
-    amount: INITIAL_BALANCE,
-  });
-  await aptos.faucet.fundAccount({
-    accountAddress: bob.accountAddress,
-    amount: INITIAL_BALANCE,
-  });
-
-  */
-
-  const collectionName = "Jambo Test Collection";
-  const collectionDescription = "Jambo Test description.";
+  const collectionName = "Testing Supercalifragilisticexpialidocious NFT Collection 12345";
+  const collectionDescription = "Supercalifragilisticexpialidocious Test description.";
   const collectionURI = "https://twitter.com/0xLoveAI";
 
-  // Create the collection
+  //Create the collection
   const createCollectionTransaction = await aptos.createCollectionTransaction({
     creator: alice,
     description: collectionDescription,
@@ -61,15 +58,17 @@ const example = async () => {
 
   let pendingTxn = await aptos.waitForTransaction({ transactionHash: committedTxn.hash });
 
+  //Already created the collection - so no need to create it again. Believe version number is 989011915
+  const version = 989011915;
   const alicesCollection = await aptos.getCollectionData({
     creatorAddress: alice.accountAddress,
     collectionName,
-    minimumLedgerVersion: BigInt(pendingTxn.version),
+    minimumLedgerVersion: BigInt(version),
   });
   console.log(`Alice's collection: ${JSON.stringify(alicesCollection, null, 4)}`);
 
-  const tokenName = "Test Aptos Monkey";
-  const tokenDescription = "Test Monkey Description.";
+  const tokenName = "Test Supercalifragilisticexpialidocious Monkey 3";
+  const tokenDescription = "Test Supercalifragilisticexpialidocious Description 3.";
   const tokenURI = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTtusIMXoR4V1kzlDbrzso40rbIZyTLb1Z3Ng&s"; //"aptos.dev/asset";
 
   console.log("\n=== Alice Mints the digital asset ===\n");
@@ -81,18 +80,6 @@ const example = async () => {
     name: tokenName,
     uri: tokenURI,
   });
-  // let mintTokenTransaction;
-  // console.log("start time: ", new Date());
-  // for (let i = 0; i < 10; i++) {
-  //   console.log(i, "this is i");
-  //   mintTokenTransaction = await aptos.mintDigitalAssetTransaction({
-  //     creator: alice,
-  //     collection: collectionName,
-  //     description: tokenDescription,
-  //     name: tokenName,
-  //     uri: tokenURI,
-  //   });
-  // }
 
   console.log("end time: ", new Date());
   console.log("\n=== mint token txn ===\n");
@@ -109,14 +96,12 @@ const example = async () => {
 
   console.log(`Alice's digital asset: ${JSON.stringify(alicesDigitalAsset[0], null, 4)}`);
 
-  return;
-
   console.log("\n=== Transfer the digital asset to Bob ===\n");
 
   const transferTransaction = await aptos.transferDigitalAssetTransaction({
     sender: alice,
     digitalAssetAddress: alicesDigitalAsset[0].token_data_id,
-    recipient: bob.accountAddress,
+    recipient: bobAccountAddress,
   });
   committedTxn = await aptos.signAndSubmitTransaction({ signer: alice, transaction: transferTransaction });
   pendingTxn = await aptos.waitForTransaction({ transactionHash: committedTxn.hash });
@@ -128,10 +113,13 @@ const example = async () => {
   console.log(`Alices's digital assets balance: ${alicesDigitalAssetsAfter.length}`);
 
   const bobDigitalAssetsAfter = await aptos.getOwnedDigitalAssets({
-    ownerAddress: bob.accountAddress,
+    ownerAddress: bobAccountAddress,
     minimumLedgerVersion: BigInt(pendingTxn.version),
   });
-  console.log(`Bob's digital assets balance: ${bobDigitalAssetsAfter.length}`);
+
+  console.log(`Bob's digital asset: ${bobDigitalAssetsAfter}`);
+
+  return;
 };
 
 example();
